@@ -1,0 +1,39 @@
+import mido
+import time
+import numpy as np
+
+
+inport = mido.open_input("Clock", virtual=True)
+outport = mido.open_output()
+
+counter1 = 0
+counter2 = 0
+
+def binaryRead(fname):
+    with open(fname, 'rb') as file:
+        rf = bytearray(file.read())
+        hexList = [hex(i) for i in rf]
+        convertedHex = [int(t,16) for t in hexList]
+        improvedHex = np.clip(convertedHex,0,127) # This truncates the range of the values so they can be sent as a midi messages, 0-127 is the max
+        return improvedHex # but you can make the range smaller if you'd like
+        print(improvedHex)
+
+
+data = binaryRead() # File goes here 
+
+
+
+for message in inport:
+    counter1 += 1
+    if (counter1 == 6) or (message.type == "start"):
+        counter1 = 0
+        counter2 += 1
+        midiNote = data[counter2 - 1]
+        noteOn = mido.Message("note_on", channel=1, note=midiNote)
+        noteOff = mido.Message("note_off", channel=1, note=midiNote)
+        outport.send(noteOn)
+        time.sleep(.05)
+        outport.send(noteOff)
+    if message.type == "stop":
+        counter1 = 0
+        counter2 = 0
